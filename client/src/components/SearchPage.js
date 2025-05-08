@@ -2,27 +2,25 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
+  Grid,
   Paper,
   Typography,
-  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Box,
+  Pagination,
   CircularProgress,
   Alert,
-  Pagination,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Slider,
-  InputAdornment,
+  Button,
+  Slider
 } from '@mui/material';
 import axios from 'axios';
 
@@ -37,33 +35,46 @@ function SearchPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCruises, setTotalCruises] = useState(0);
   
-  // Filter states
-  const [filters, setFilters] = useState({
-    cruiseLine: '25', // Default to Royal Caribbean ID
-    duration: '',
-    portOfDeparture: '310', // Default to Port Canaveral ID
-    priceRange: [0, 5000],
-  });
-  
-  // Available options for filters
+  // Filter options from API
   const [filterOptions, setFilterOptions] = useState({
     brands: [],
     ports: [],
-    durations: []
+    durations: [],
+    prices: []
+  });
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    brand: ['25'], // Default to Royal Caribbean ID
+    port: ['310'], // Default to Port Canaveral ID
+    duration: [],
+    priceRange: [0, 5000],
+    page: 1
   });
 
-  // Fetch filter options when component mounts
+  // Fetch filter options from API
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const response = await axios.get(`${API_URL}/filters`);
-        setFilterOptions(response.data);
+        const response = await axios.get(`${API_URL}/filters`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (response.data?.data) {
+          setFilterOptions({
+            brands: response.data.data.brands || [],
+            ports: response.data.data.ports || [],
+            durations: response.data.data.durations || [],
+            prices: response.data.data.prices || []
+          });
+        }
       } catch (err) {
         console.error('Error fetching filter options:', err);
-        setError('Failed to load filter options. Please refresh the page.');
       }
     };
-    
+
     fetchFilterOptions();
   }, []);
 
@@ -72,12 +83,28 @@ function SearchPage() {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_URL}/cruises`, {
-        params: {
-          'brand[]': [filters.cruiseLine],
-          'port[]': filters.portOfDeparture ? [filters.portOfDeparture] : ['310'],
-          'duration[]': filters.duration ? [filters.duration] : [],
-          page
+      const params = {
+        'brand[]': filters.brand,
+        'port[]': filters.port,
+        page: filters.page,
+        _t: new Date().getTime() // Add timestamp to prevent caching
+      };
+
+      // Only add duration parameter if it has values
+      if (filters.duration.length > 0) {
+        params['duration[]'] = filters.duration;
+      }
+
+      console.log('Sending filters to API:', {
+        filters,
+        queryParams: params
+      });
+      
+      const response = await axios.get(`${API_URL}/cruises`, { 
+        params,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
       
@@ -85,9 +112,30 @@ function SearchPage() {
         throw new Error('No data received from API');
       }
 
-      setCruises(response.data.data.data);
-      setTotalPages(response.data.data.last_page || 1);
-      setTotalCruises(response.data.data.total || 0);
+      // Log the entire response structure
+      console.log('Full API Response:', response.data);
+      
+      // The data structure from the API is response.data.data.data
+      const cruisesData = response.data.data?.data;
+      console.log('Processed cruises data:', cruisesData);
+      
+      if (!Array.isArray(cruisesData)) {
+        console.error('Unexpected API response structure:', response.data);
+        throw new Error('Invalid API response structure');
+      }
+
+      // Update state with new data
+      setCruises(cruisesData);
+      setTotalPages(response.data.data?.last_page || 1);
+      setTotalCruises(response.data.data?.total || 0);
+      
+      // Log state updates
+      console.log('Updated state:', {
+        cruisesCount: cruisesData.length,
+        totalPages: response.data.data?.last_page,
+        totalCruises: response.data.data?.total
+      });
+
     } catch (err) {
       console.error('Error fetching cruises:', {
         message: err.message,
@@ -123,9 +171,9 @@ function SearchPage() {
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({
       ...prev,
-      [filterName]: value
+      [filterName]: value,
+      page: 1 // Reset to first page when filters change
     }));
-    setPage(1); // Reset to first page when filters change
   };
 
   const handlePriceRangeChange = (event, newValue) => {
@@ -136,7 +184,10 @@ function SearchPage() {
   };
 
   const handlePageChange = (event, value) => {
-    setPage(value);
+    setFilters(prev => ({
+      ...prev,
+      page: value
+    }));
   };
 
   const handleWatchCruise = async (cruise) => {
@@ -178,12 +229,15 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Cruise Line</InputLabel>
               <Select
-                value={filters.cruiseLine}
+                multiple
+                value={filters.brand}
                 label="Cruise Line"
-                onChange={(e) => handleFilterChange('cruiseLine', e.target.value)}
+                onChange={(e) => handleFilterChange('brand', e.target.value)}
               >
                 {filterOptions.brands.map((brand) => (
-                  <MenuItem key={brand.id} value={brand.id}>{brand.name}</MenuItem>
+                  <MenuItem key={brand.id} value={brand.id.toString()}>
+                    {brand.name}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -193,13 +247,15 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Duration</InputLabel>
               <Select
+                multiple
                 value={filters.duration}
                 label="Duration"
                 onChange={(e) => handleFilterChange('duration', e.target.value)}
               >
-                <MenuItem value="">Any Duration</MenuItem>
                 {filterOptions.durations.map((duration) => (
-                  <MenuItem key={duration.id} value={duration.id}>{duration.name}</MenuItem>
+                  <MenuItem key={duration.id} value={duration.id}>
+                    {duration.name}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -209,12 +265,15 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Port of Departure</InputLabel>
               <Select
-                value={filters.portOfDeparture}
+                multiple
+                value={filters.port}
                 label="Port of Departure"
-                onChange={(e) => handleFilterChange('portOfDeparture', e.target.value)}
+                onChange={(e) => handleFilterChange('port', e.target.value)}
               >
                 {filterOptions.ports.map((port) => (
-                  <MenuItem key={port.id} value={port.id}>{port.name}</MenuItem>
+                  <MenuItem key={port.id} value={port.id.toString()}>
+                    {port.name}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>

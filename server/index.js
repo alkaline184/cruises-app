@@ -13,6 +13,15 @@ app.use(cors());
 // Middleware
 app.use(express.json());
 
+// Add cache control headers to all responses
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Database configuration
 const pool = mysql.createPool({
   user: process.env.DB_USER,
@@ -39,55 +48,108 @@ pool.getConnection()
 app.get('/api/filters', async (req, res) => {
   try {
     const response = await axios.get('http://api.cruiseway.gr/api/content/filters');
-    const filterData = response.data.data;
-    
-    // Format the data for the frontend
-    const formattedFilters = {
-      brands: filterData.brands.map(brand => ({
-        id: brand.id.toString(),
-        name: brand.name
-      })),
-      ports: filterData.ports.map(port => ({
-        id: port.id.toString(),
-        name: port.name,
-        code: port.code
-      })),
-      durations: filterData.durations.map(duration => ({
-        id: duration.id,
-        name: duration.name
-      }))
-    };
-    
-    res.json(formattedFilters);
+    res.json(response.data);
   } catch (error) {
-    console.error('Error fetching filters:', error);
-    res.status(500).json({ error: 'Failed to fetch filters' });
+    console.error('Error fetching filter options:', error);
+    res.status(500).json({ error: 'Failed to fetch filter options' });
   }
 });
 
 app.get('/api/cruises', async (req, res) => {
   try {
-    console.log('Fetching cruises with params:', req.query);
+    console.log('Received query parameters:', {
+      raw: req.query,
+      brand: req.query.brand,
+      port: req.query.port,
+      duration: req.query.duration,
+      page: req.query.page
+    });
+
+    const params = {
+      sort: 'departured_at',
+      order: 'asc',
+      page: req.query.page || 1
+    };
+
+    // Handle brand parameter
+    if (req.query.brand) {
+      params['brand[]'] = Array.isArray(req.query.brand) ? req.query.brand : [req.query.brand];
+    } else {
+      params['brand[]'] = ['25']; // Default brand
+    }
+
+    // Handle port parameter
+    if (req.query.port) {
+      params['port[]'] = Array.isArray(req.query.port) ? req.query.port : [req.query.port];
+    } else {
+      params['port[]'] = ['310']; // Default port
+    }
+
+    // Handle duration parameter
+    if (req.query.duration) {
+      params['duration[]'] = Array.isArray(req.query.duration) ? req.query.duration : [req.query.duration];
+    }
+
+    console.log('Sending parameters to Cruiseway API:', params);
+    
     const response = await axios.get('http://api.cruiseway.gr/api/cruises', {
       params: {
-        'brand[]': req.query['brand[]'] || ['25'], // Default to Royal Caribbean if not specified
-        'port[]': req.query['port[]'] || ['310'],
-        'duration[]': req.query['duration[]'] || [],
-        sort: 'departured_at',
-        order: 'asc',
-        page: req.query.page || 1
+        ...params,
+        _t: new Date().getTime() // Add timestamp to prevent caching
+      },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'If-None-Match': '', // Prevent 304 responses
+        'If-Modified-Since': '' // Prevent 304 responses
+      },
+      validateStatus: function (status) {
+        return status >= 200 && status < 300; // Only accept 2xx status codes
       }
     });
-    console.log('Cruiseway API Response:', {
-      total: response.data.total,
-      last_page: response.data.last_page,
-      current_page: response.data.current_page,
-      data_length: response.data.data?.length,
-      data_structure: Object.keys(response.data)
+    
+    // Log response headers and request details
+    console.log('Cruiseway API Response Headers:', {
+      'cache-control': response.headers['cache-control'],
+      'etag': response.headers['etag'],
+      'last-modified': response.headers['last-modified'],
+      'date': response.headers['date'],
+      'status': response.status,
+      'statusText': response.statusText
     });
+    
+    console.log('Request URL:', response.request.res.responseUrl);
+    
+    // Validate the response structure
+    if (!response.data || !response.data.data || !Array.isArray(response.data.data.data)) {
+      console.error('Invalid response structure from Cruiseway API:', response.data);
+      return res.status(500).json({ error: 'Invalid response from cruise API' });
+    }
+
+    // Log the full response for debugging
+    console.log('Full Cruiseway API Response:', {
+      total: response.data.data.total,
+      last_page: response.data.data.last_page,
+      current_page: response.data.data.current_page,
+      data_length: response.data.data.data.length,
+      data_structure: Object.keys(response.data),
+      first_cruise: response.data.data.data[0] ? {
+        id: response.data.data.data[0].id,
+        brand: response.data.data.data[0].vessel?.brand?.name,
+        port: response.data.data.data[0].port?.name,
+        duration: response.data.data.data[0].duration
+      } : null
+    });
+    
     res.json(response.data);
   } catch (error) {
-    console.error('Error fetching cruises:', error);
+    console.error('Error fetching cruises:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config
+    });
     res.status(500).json({ error: 'Failed to fetch cruises' });
   }
 });
