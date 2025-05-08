@@ -40,7 +40,8 @@ function SearchPage() {
     brands: [],
     ports: [],
     durations: [],
-    prices: []
+    prices: [],
+    departure: []
   });
   
   // Filter states
@@ -48,6 +49,7 @@ function SearchPage() {
     brand: '25', // Default to Royal Caribbean ID
     port: '310', // Default to Port Canaveral ID
     duration: '',
+    departure: '', // Add departure date filter
     page: 1
   });
 
@@ -66,7 +68,8 @@ function SearchPage() {
             brands: response.data.data.brands || [],
             ports: response.data.data.ports || [],
             durations: response.data.data.durations || [],
-            prices: response.data.data.prices || []
+            prices: response.data.data.prices || [],
+            departure: response.data.data.departure || []
           });
         }
       } catch (err) {
@@ -92,6 +95,11 @@ function SearchPage() {
       // Only add duration parameter if it has a value
       if (filters.duration) {
         params['duration[]'] = [filters.duration];
+      }
+
+      // Only add departure parameter if it has a value
+      if (filters.departure) {
+        params['departure[]'] = [filters.departure];
       }
 
       console.log('Sending filters to API:', {
@@ -262,6 +270,23 @@ function SearchPage() {
                 {filterOptions.ports.map((port) => (
                   <MenuItem key={port.id} value={port.id.toString()}>
                     {port.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth>
+              <InputLabel>Departure Date</InputLabel>
+              <Select
+                value={filters.departure}
+                label="Departure Date"
+                onChange={(e) => handleFilterChange('departure', e.target.value)}
+              >
+                {filterOptions.departure?.map((date) => (
+                  <MenuItem key={date.id} value={date.id}>
+                    {date.name}
                   </MenuItem>
                 ))}
               </Select>

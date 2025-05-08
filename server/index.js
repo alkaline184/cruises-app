@@ -90,6 +90,11 @@ app.get('/api/cruises', async (req, res) => {
       params['duration[]'] = Array.isArray(req.query.duration) ? req.query.duration : [req.query.duration];
     }
 
+    // Handle departure parameter
+    if (req.query.departure) {
+      params['departure[]'] = Array.isArray(req.query.departure) ? req.query.departure : [req.query.departure];
+    }
+
     console.log('Sending parameters to Cruiseway API:', params);
     
     const response = await axios.get('http://api.cruiseway.gr/api/cruises', {
