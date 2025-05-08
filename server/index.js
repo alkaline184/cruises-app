@@ -209,12 +209,20 @@ app.post('/api/watched/update-prices', async (req, res) => {
     const [watchedCruises] = await connection.execute('SELECT * FROM watched_cruises');
     
     for (const cruise of watchedCruises) {
-      const response = await axios.get(`http://api.cruiseway.gr/api/cruises/${cruise.cruise_id}`);
-      const currentPrice = response.data.price;
+      const response = await axios.get(`http://api.cruiseway.gr/api/cruises/id/${cruise.cruise_id}`);
+      const rawPrice = response.data.data.starting_price;
+      
+      // Clean up the price format
+      const cleanPrice = rawPrice
+        ?.toString()
+        .replace(/[€\s]/g, '')    // Remove € and spaces
+        .replace(/\./g, '')       // Remove dots (thousand separators)
+        .replace(',', '.')        // Replace comma with dot for decimal
+        || null;
       
       await connection.execute(
         'INSERT INTO price_history (cruise_id, price) VALUES (?, ?)',
-        [cruise.cruise_id, currentPrice]
+        [cruise.cruise_id, cleanPrice]
       );
     }
     
@@ -267,10 +275,10 @@ pool.getConnection((err, connection) => {
 
     CREATE TABLE IF NOT EXISTS price_history (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      watched_cruise_id INT,
+      cruise_id VARCHAR(255) NOT NULL,
       price VARCHAR(255) NOT NULL,
-      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (watched_cruise_id) REFERENCES watched_cruises(id) ON DELETE CASCADE
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (cruise_id) REFERENCES watched_cruises(cruise_id) ON DELETE CASCADE
     );
   `;
 
