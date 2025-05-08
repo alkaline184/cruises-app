@@ -172,8 +172,15 @@ const CruiseDetails = () => {
                 <Typography variant="subtitle1">
                   <strong>Duration:</strong> {cruise.duration} nights
                 </Typography>
-                <Typography variant="subtitle1">
-                  <strong>Departure Date:</strong> {cruise.departured_at}
+                <Typography variant="body1" gutterBottom>
+                  <strong>Departure Date:</strong>{' '}
+                  {cruise.departured_at ? (
+                    (() => {
+                      // API returns date in format "20/08/2025"
+                      const [day, month, year] = cruise.departured_at.split('/');
+                      return `${month}/${day}/${year}`;
+                    })()
+                  ) : 'N/A'}
                 </Typography>
                 <Typography variant="subtitle1">
                   <strong>Port of Departure:</strong> {cruise.port.name}, {cruise.port.country.name}

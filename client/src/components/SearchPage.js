@@ -49,7 +49,7 @@ function SearchPage() {
     brand: '25', // Default to Royal Caribbean ID
     port: '310', // Default to Port Canaveral ID
     duration: '',
-    departure: '', // Add departure date filter
+    departure: '', // Format: mm/dd/YYYY
     page: 1
   });
 
@@ -99,7 +99,9 @@ function SearchPage() {
 
       // Only add departure parameter if it has a value
       if (filters.departure) {
-        params['departure[]'] = [filters.departure];
+        // Convert mm/dd/YYYY to YYYY-MM for API
+        const [month, day, year] = filters.departure.split('/');
+        params['departure[]'] = [`${year}-${month.padStart(2, '0')}`];
       }
 
       console.log('Sending filters to API:', {
@@ -284,11 +286,16 @@ function SearchPage() {
                 label="Departure Date"
                 onChange={(e) => handleFilterChange('departure', e.target.value)}
               >
-                {filterOptions.departure?.map((date) => (
-                  <MenuItem key={date.id} value={date.id}>
-                    {date.name}
-                  </MenuItem>
-                ))}
+                {filterOptions.departure?.map((date) => {
+                  // Convert YYYY-MM to mm/dd/YYYY
+                  const [year, month] = date.id.split('-');
+                  const formattedDate = `${month}/01/${year}`; // Use first day of month
+                  return (
+                    <MenuItem key={date.id} value={formattedDate}>
+                      {date.name}
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
           </Grid>
@@ -339,7 +346,15 @@ function SearchPage() {
                     <TableCell>{cruise.vessel?.name || 'N/A'}</TableCell>
                     <TableCell>{cruise.duration} days</TableCell>
                     <TableCell>{cruise.port?.name || 'N/A'}</TableCell>
-                    <TableCell>{cruise.departured_at || 'N/A'}</TableCell>
+                    <TableCell>
+                      {cruise.departured_at ? (
+                        (() => {
+                          // API returns date in format "20/08/2025"
+                          const [day, month, year] = cruise.departured_at.split('/');
+                          return `${month}/${day}/${year}`;
+                        })()
+                      ) : 'N/A'}
+                    </TableCell>
                     <TableCell>
                       {cruise.group_prices ? (
                         <>
