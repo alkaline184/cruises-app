@@ -231,6 +231,16 @@ function SearchPage() {
     }
   };
 
+  const convertToDollars = (euroPrice) => {
+    const rate = 1.13; // 1 EUR = 1.13 USD
+    // Convert European format (€2.713,00) to number
+    const price = parseFloat(euroPrice?.toString()
+      .replace(/[€\s]/g, '') // Remove € and spaces
+      .replace(/\./g, '')    // Remove dots (thousand separators)
+      .replace(',', '.'));   // Replace comma with dot for decimal
+    return isNaN(price) ? 'N/A' : Math.round(price * rate);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
@@ -390,10 +400,10 @@ function SearchPage() {
                     <TableCell>
                       {cruise.group_prices ? (
                         <>
-                          {cruise.group_prices.min} - {cruise.group_prices.S}
+                          ${convertToDollars(cruise.group_prices.min)} - ${convertToDollars(cruise.group_prices.S)}
                         </>
                       ) : (
-                        cruise.starting_price || 'N/A'
+                        cruise.starting_price ? `$${convertToDollars(cruise.starting_price)}` : 'N/A'
                       )}
                     </TableCell>
                     <TableCell>

@@ -79,6 +79,16 @@ const CruiseDetails = () => {
     return subCategory ? `${baseDescription} (sub-category ${subCategory})` : baseDescription;
   };
 
+  const convertToDollars = (euroPrice) => {
+    const rate = 1.13; // 1 EUR = 1.13 USD
+    // Convert European format (€2.713,00) to number
+    const price = parseFloat(euroPrice?.toString()
+      .replace(/[€\s]/g, '') // Remove € and spaces
+      .replace(/\./g, '')    // Remove dots (thousand separators)
+      .replace(',', '.'));   // Replace comma with dot for decimal
+    return isNaN(price) ? 'N/A' : Math.round(price * rate);
+  };
+
   useEffect(() => {
     const fetchCruiseDetails = async () => {
       try {
@@ -252,7 +262,7 @@ const CruiseDetails = () => {
                           <TableRow>
                             <TableCell>Category</TableCell>
                             <TableCell>Description</TableCell>
-                            <TableCell>Price (€)</TableCell>
+                            <TableCell>Price</TableCell>
                             <TableCell>Package</TableCell>
                             <TableCell>Availability</TableCell>
                           </TableRow>
@@ -262,7 +272,7 @@ const CruiseDetails = () => {
                             <TableRow key={category.id}>
                               <TableCell>{category.name}</TableCell>
                               <TableCell>{getCabinDescription(category.code)}</TableCell>
-                              <TableCell>{category.price.display}</TableCell>
+                              <TableCell>${convertToDollars(category.price.display)}</TableCell>
                               <TableCell>{category.price.package}</TableCell>
                               <TableCell>
                                 <Chip 
