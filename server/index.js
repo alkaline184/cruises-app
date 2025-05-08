@@ -237,11 +237,23 @@ app.post('/api/watched/update-prices', async (req, res) => {
   }
 });
 
-app.delete('/api/watch/:id', async (req, res) => {
+app.delete('/api/watch/:cruiseId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    await connection.execute('DELETE FROM watched_cruises WHERE cruise_id = ?', [req.params.id]);
+    
+    // First delete all price history records for this cruise
+    await connection.execute(
+      'DELETE FROM price_history WHERE cruise_id = ?',
+      [req.params.cruiseId]
+    );
+    
+    // Then delete the watched cruise
+    await connection.execute(
+      'DELETE FROM watched_cruises WHERE cruise_id = ?',
+      [req.params.cruiseId]
+    );
+    
     await connection.commit();
     res.json({ message: 'Cruise unwatched successfully' });
   } catch (error) {
