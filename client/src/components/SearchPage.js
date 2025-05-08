@@ -45,10 +45,9 @@ function SearchPage() {
   
   // Filter states
   const [filters, setFilters] = useState({
-    brand: ['25'], // Default to Royal Caribbean ID
-    port: ['310'], // Default to Port Canaveral ID
-    duration: [],
-    priceRange: [0, 5000],
+    brand: '25', // Default to Royal Caribbean ID
+    port: '310', // Default to Port Canaveral ID
+    duration: '',
     page: 1
   });
 
@@ -84,15 +83,15 @@ function SearchPage() {
       setError(null);
 
       const params = {
-        'brand[]': filters.brand,
-        'port[]': filters.port,
+        'brand[]': [filters.brand],
+        'port[]': [filters.port],
         page: filters.page,
         _t: new Date().getTime() // Add timestamp to prevent caching
       };
 
-      // Only add duration parameter if it has values
-      if (filters.duration.length > 0) {
-        params['duration[]'] = filters.duration;
+      // Only add duration parameter if it has a value
+      if (filters.duration) {
+        params['duration[]'] = [filters.duration];
       }
 
       console.log('Sending filters to API:', {
@@ -176,13 +175,6 @@ function SearchPage() {
     }));
   };
 
-  const handlePriceRangeChange = (event, newValue) => {
-    setFilters(prev => ({
-      ...prev,
-      priceRange: newValue
-    }));
-  };
-
   const handlePageChange = (event, value) => {
     setFilters(prev => ({
       ...prev,
@@ -229,7 +221,6 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Cruise Line</InputLabel>
               <Select
-                multiple
                 value={filters.brand}
                 label="Cruise Line"
                 onChange={(e) => handleFilterChange('brand', e.target.value)}
@@ -247,7 +238,6 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Duration</InputLabel>
               <Select
-                multiple
                 value={filters.duration}
                 label="Duration"
                 onChange={(e) => handleFilterChange('duration', e.target.value)}
@@ -265,7 +255,6 @@ function SearchPage() {
             <FormControl fullWidth>
               <InputLabel>Port of Departure</InputLabel>
               <Select
-                multiple
                 value={filters.port}
                 label="Port of Departure"
                 onChange={(e) => handleFilterChange('port', e.target.value)}
@@ -277,22 +266,6 @@ function SearchPage() {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography gutterBottom>Price Range (€)</Typography>
-            <Slider
-              value={filters.priceRange}
-              onChange={handlePriceRangeChange}
-              valueLabelDisplay="auto"
-              min={0}
-              max={5000}
-              step={100}
-              marks={[
-                { value: 0, label: '0€' },
-                { value: 5000, label: '5000€' }
-              ]}
-            />
           </Grid>
         </Grid>
       </Paper>
