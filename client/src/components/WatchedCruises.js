@@ -142,7 +142,39 @@ function WatchedCruises() {
                 ) : 'N/A'}<br />
                 Port: {watchedCruise.port_name || 'N/A'}<br />
                 Duration: {watchedCruise.duration || 'N/A'} nights<br />
-                Starting Price: ${watchedCruise.starting_price || 'N/A'}
+                {(() => {
+                  const prices = watchedCruise.price_history || [];
+                  const priceValues = prices.map(p => parseFloat(p.price));
+                  const currentPrice = parseFloat(watchedCruise.starting_price);
+                  const minPrice = Math.min(...priceValues, currentPrice);
+                  const hasHistory = prices.length > 0;
+                  
+                  let color = 'inherit';
+                  let previousPriceText = '';
+                  
+                  if (hasHistory) {
+                    if (currentPrice === minPrice) {
+                      color = '#2e7d32'; // success.main
+                    } else {
+                      color = '#d32f2f'; // error.main
+                      // Find the previous lowest price
+                      const previousPrices = prices.filter(p => parseFloat(p.price) < currentPrice);
+                      if (previousPrices.length > 0) {
+                        const lowestPrevious = previousPrices.reduce((min, p) => 
+                          parseFloat(p.price) < parseFloat(min.price) ? p : min
+                        );
+                        previousPriceText = ` (was $${lowestPrevious.price} on ${formatDate(lowestPrevious.recorded_at)})`;
+                      }
+                    }
+                  }
+                  
+                  return (
+                    <>
+                      Starting Price: <span style={{ color, fontWeight: 'bold' }}>${watchedCruise.starting_price || 'N/A'}</span>
+                      {previousPriceText}
+                    </>
+                  );
+                })()}
               </Typography>
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
                 <Button
@@ -209,7 +241,7 @@ function WatchedCruises() {
                             return (
                               <TableRow key={index}>
                                 <TableCell padding="none" size="small">{formatDate(price.recorded_at)}</TableCell>
-                                <TableCell padding="none" size="small" align="right" sx={{ color }}>
+                                <TableCell padding="none" size="small" align="right" sx={{ color, fontWeight: 'bold' }}>
                                   ${price.price}
                                 </TableCell>
                               </TableRow>
