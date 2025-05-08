@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -31,6 +31,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const CruiseDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const [cruise, setCruise] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -111,7 +113,10 @@ const CruiseDetails = () => {
           <Typography color="error">{error}</Typography>
           <Button
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const currentParams = new URLSearchParams(location.search);
+              navigate(`/?${currentParams.toString()}`);
+            }}
             sx={{ mt: 2 }}
           >
             Back to Search
@@ -145,10 +150,14 @@ const CruiseDetails = () => {
   console.log('Cabin prices:', cabinPrices);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Button
+        variant="outlined"
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          const currentParams = new URLSearchParams(location.search);
+          navigate(`/?${currentParams.toString()}`);
+        }}
         sx={{ mb: 3 }}
       >
         Back to Search

@@ -65,52 +65,18 @@ app.get('/api/cruises', async (req, res) => {
       page: req.query.page
     });
 
-    const params = {
-      sort: 'departured_at',
-      order: 'asc',
-      page: req.query.page || 1
-    };
-
-    // Handle brand parameter
-    if (req.query.brand) {
-      params['brand[]'] = Array.isArray(req.query.brand) ? req.query.brand : [req.query.brand];
-    } else {
-      params['brand[]'] = ['25']; // Default brand
-    }
-
-    // Handle port parameter
-    if (req.query.port) {
-      params['port[]'] = Array.isArray(req.query.port) ? req.query.port : [req.query.port];
-    } else {
-      params['port[]'] = ['310']; // Default port
-    }
-
-    // Handle duration parameter
-    if (req.query.duration) {
-      params['duration[]'] = Array.isArray(req.query.duration) ? req.query.duration : [req.query.duration];
-    }
-
-    // Handle departure parameter
-    if (req.query.departure) {
-      params['departure[]'] = Array.isArray(req.query.departure) ? req.query.departure : [req.query.departure];
-    }
-
-    console.log('Sending parameters to Cruiseway API:', params);
-    
+    // Forward the request to Cruiseway API
     const response = await axios.get('http://api.cruiseway.gr/api/cruises', {
       params: {
-        ...params,
-        _t: new Date().getTime() // Add timestamp to prevent caching
+        page: req.query.page || '1',
+        'brand[]': req.query.brand || [],
+        'port[]': req.query.port || [],
+        'duration[]': req.query.duration || [],
+        'departure[]': req.query.departure || []
       },
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'If-None-Match': '', // Prevent 304 responses
-        'If-Modified-Since': '' // Prevent 304 responses
-      },
-      validateStatus: function (status) {
-        return status >= 200 && status < 300; // Only accept 2xx status codes
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     });
     

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Container,
   Grid,
@@ -28,10 +28,10 @@ const API_URL = 'http://localhost:5001/api';
 
 function SearchPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cruises, setCruises] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCruises, setTotalCruises] = useState(0);
   
@@ -46,11 +46,11 @@ function SearchPage() {
   
   // Filter states
   const [filters, setFilters] = useState({
-    brand: '25', // Default to Royal Caribbean ID
-    port: '310', // Default to Port Canaveral ID
-    duration: '',
-    departure: '', // Format: mm/dd/YYYY
-    page: 1
+    brand: searchParams.get('brand') || '25', // Default to Royal Caribbean ID
+    port: searchParams.get('port') || '310', // Default to Port Canaveral ID
+    duration: searchParams.get('duration') || '',
+    departure: searchParams.get('departure') || '', // Format: mm/dd/YYYY
+    page: parseInt(searchParams.get('page') || '1')
   });
 
   // Fetch filter options from API
@@ -79,6 +79,35 @@ function SearchPage() {
 
     fetchFilterOptions();
   }, []);
+
+  // Update URL when filters change
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.brand) params.set('brand', filters.brand);
+    if (filters.port) params.set('port', filters.port);
+    if (filters.duration) params.set('duration', filters.duration);
+    if (filters.departure) params.set('departure', filters.departure);
+    if (filters.page > 1) params.set('page', filters.page);
+    setSearchParams(params);
+  }, [filters, setSearchParams]);
+
+  // Initialize filters from URL parameters when component mounts
+  useEffect(() => {
+    const brand = searchParams.get('brand');
+    const port = searchParams.get('port');
+    const duration = searchParams.get('duration');
+    const departure = searchParams.get('departure');
+    const page = parseInt(searchParams.get('page') || '1');
+
+    setFilters(prev => ({
+      ...prev,
+      brand: brand || prev.brand,
+      port: port || prev.port,
+      duration: duration || prev.duration,
+      departure: departure || prev.departure,
+      page: page || prev.page
+    }));
+  }, [searchParams]);
 
   const fetchCruises = useCallback(async () => {
     try {
@@ -170,9 +199,9 @@ function SearchPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page]);
+  }, [filters]);
 
-  // Fetch cruises when filters or page changes
+  // Fetch cruises when filters change
   useEffect(() => {
     fetchCruises();
   }, [fetchCruises]);
@@ -308,7 +337,7 @@ function SearchPage() {
         </Typography>
         <Pagination 
           count={totalPages} 
-          page={page} 
+          page={filters.page} 
           onChange={handlePageChange}
           color="primary"
           size="large"
@@ -329,7 +358,7 @@ function SearchPage() {
                   <TableCell>Ship Name</TableCell>
                   <TableCell>Duration</TableCell>
                   <TableCell>Port of Departure</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Departure Date ↑</TableCell>
+                  <TableCell>Departure Date</TableCell>
                   <TableCell>Price Range</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
@@ -339,7 +368,10 @@ function SearchPage() {
                   <TableRow
                     key={cruise.id}
                     hover
-                    onClick={() => navigate(`/cruise/${cruise.id}`)}
+                    onClick={() => {
+                      const currentParams = new URLSearchParams(searchParams);
+                      navigate(`/cruise/${cruise.id}?${currentParams.toString()}`);
+                    }}
                     sx={{ cursor: 'pointer' }}
                   >
                     <TableCell>{cruise.vessel?.brand?.name || 'N/A'}</TableCell>
@@ -384,7 +416,7 @@ function SearchPage() {
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
             <Pagination 
               count={totalPages} 
-              page={page} 
+              page={filters.page} 
               onChange={handlePageChange}
               color="primary"
               size="large"
