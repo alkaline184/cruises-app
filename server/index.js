@@ -147,27 +147,25 @@ app.get('/api/cruises/id/:id', async (req, res) => {
   }
 });
 
-// Watched cruises routes
+// Watch a cruise
 app.post('/api/watch', async (req, res) => {
-  const { id, ...cruiseData } = req.body;
   const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction();
+    const { cruise_id, vessel_name, departure_date, port_name, duration, starting_price } = req.body;
     
+    // Validate required fields
+    if (!cruise_id) {
+      return res.status(400).json({ error: 'Cruise ID is required' });
+    }
+
+    // Insert into watched_cruises table
     const [result] = await connection.execute(
-      'INSERT INTO watched_cruises (cruise_id, cruise_data) VALUES (?, ?)',
-      [id, JSON.stringify(cruiseData)]
+      'INSERT INTO watched_cruises (cruise_id, vessel_name, departure_date, port_name, duration, starting_price) VALUES (?, ?, ?, ?, ?, ?)',
+      [cruise_id, vessel_name || null, departure_date || null, port_name || null, duration || null, starting_price || null]
     );
-    
-    await connection.execute(
-      'INSERT INTO price_history (cruise_id, price) VALUES (?, ?)',
-      [id, cruiseData.price]
-    );
-    
-    await connection.commit();
-    res.json({ id: result.insertId, cruise_id: id, cruise_data: cruiseData });
+
+    res.json({ success: true, message: 'Cruise added to watch list' });
   } catch (error) {
-    await connection.rollback();
     console.error('Error watching cruise:', error);
     res.status(500).json({ error: 'Failed to watch cruise' });
   } finally {
@@ -178,28 +176,23 @@ app.post('/api/watch', async (req, res) => {
 app.get('/api/watched', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    const [rows] = await connection.execute(`
-      SELECT 
-        wc.*,
-        JSON_ARRAYAGG(
-          JSON_OBJECT(
-            'price', ph.price,
-            'recorded_at', ph.recorded_at
-          )
-        ) as price_history
-      FROM watched_cruises wc
-      LEFT JOIN price_history ph ON wc.cruise_id = ph.cruise_id
-      GROUP BY wc.id
-    `);
+    // First get all watched cruises
+    const [watchedCruises] = await connection.execute('SELECT * FROM watched_cruises');
     
-    // Parse the JSON strings
-    const parsedRows = rows.map(row => ({
-      ...row,
-      cruise_data: JSON.parse(row.cruise_data),
-      price_history: JSON.parse(row.price_history)
+    // Then get price history for each cruise
+    const cruisesWithHistory = await Promise.all(watchedCruises.map(async (cruise) => {
+      const [priceHistory] = await connection.execute(
+        'SELECT price, recorded_at FROM price_history WHERE cruise_id = ? ORDER BY recorded_at DESC',
+        [cruise.cruise_id]
+      );
+      
+      return {
+        ...cruise,
+        price_history: priceHistory
+      };
     }));
     
-    res.json(parsedRows);
+    res.json(cruisesWithHistory);
   } catch (error) {
     console.error('Error fetching watched cruises:', error);
     res.status(500).json({ error: 'Failed to fetch watched cruises' });
@@ -267,7 +260,11 @@ const initializeDatabase = async () => {
       CREATE TABLE IF NOT EXISTS watched_cruises (
         id INT AUTO_INCREMENT PRIMARY KEY,
         cruise_id VARCHAR(255) NOT NULL UNIQUE,
-        cruise_data JSON NOT NULL,
+        vessel_name VARCHAR(255),
+        departure_date VARCHAR(255),
+        port_name VARCHAR(255),
+        duration INT,
+        starting_price VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);

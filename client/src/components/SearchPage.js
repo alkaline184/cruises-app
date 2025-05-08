@@ -223,7 +223,34 @@ function SearchPage() {
 
   const handleWatchCruise = async (cruise) => {
     try {
-      await axios.post(`${API_URL}/watch`, cruise);
+      console.log('Cruise data:', cruise); // Debug log
+      
+      if (!cruise || !cruise.id) {
+        console.error('Invalid cruise data:', cruise);
+        return;
+      }
+      
+      // Clean up the starting price
+      const cleanPrice = cruise.starting_price
+        ?.toString()
+        .replace(/[€\s]/g, '') // Remove € and spaces
+        .replace(/\./g, '')    // Remove dots (thousand separators)
+        .replace(',', '.')     // Replace comma with dot for decimal
+        || null;
+      
+      // Only send the essential cruise data with safe property access
+      const watchData = {
+        cruise_id: cruise.id,
+        vessel_name: cruise.vessel?.name || cruise.vessel_name || 'Unknown Ship',
+        departure_date: cruise.departured_at || cruise.departure_date || null,
+        port_name: cruise.port?.name || cruise.port_name || 'Unknown Port',
+        duration: cruise.duration || null,
+        starting_price: cleanPrice
+      };
+      
+      console.log('Watch data being sent:', watchData); // Debug log
+      
+      await axios.post(`${API_URL}/watch`, watchData);
       // You might want to show a success message or update the UI
     } catch (err) {
       console.error('Error watching cruise:', err);
@@ -383,9 +410,9 @@ function SearchPage() {
                     }}
                     sx={{ cursor: 'pointer' }}
                   >
-                    <TableCell>{cruise.vessel.name}</TableCell>
+                    <TableCell>{cruise.vessel?.name || 'N/A'}</TableCell>
                     <TableCell>{cruise.duration} nights</TableCell>
-                    <TableCell>{cruise.port.name}</TableCell>
+                    <TableCell>{cruise.port?.name || 'N/A'}</TableCell>
                     <TableCell>
                       {cruise.departured_at ? (
                         (() => {

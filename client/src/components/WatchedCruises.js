@@ -91,44 +91,50 @@ function WatchedCruises() {
         </Button>
       </Box>
       <Grid container spacing={3}>
-        {watchedCruises.map((watchedCruise) => {
-          const cruise = watchedCruise.cruise_data;
-          return (
-            <Grid item xs={12} md={6} lg={4} key={watchedCruise.id}>
-              <Paper
-                sx={{
-                  p: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: 240,
-                }}
-              >
-                <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                  {cruise.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
-                  {cruise.description}
-                </Typography>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => navigate(`/cruise/${cruise.id}`)}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={() => handleUnwatchCruise(cruise.id)}
-                  >
-                    Unwatch
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          );
-        })}
+        {watchedCruises.map((watchedCruise) => (
+          <Grid item xs={12} md={6} lg={4} key={watchedCruise.id}>
+            <Paper
+              sx={{
+                p: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                height: 240,
+              }}
+            >
+              <Typography component="h2" variant="h6" color="primary" gutterBottom>
+                {watchedCruise.vessel_name || 'Unknown Ship'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                Departure: {watchedCruise.departure_date ? (
+                  (() => {
+                    // API returns date in format "20/08/2025"
+                    const [day, month, year] = watchedCruise.departure_date.split('/');
+                    return `${month}/${day}/${year}`;
+                  })()
+                ) : 'N/A'}<br />
+                Port: {watchedCruise.port_name || 'N/A'}<br />
+                Duration: {watchedCruise.duration || 'N/A'} nights<br />
+                Starting Price: ${watchedCruise.starting_price || 'N/A'}
+              </Typography>
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => navigate(`/cruise/${watchedCruise.cruise_id}`)}
+                >
+                  View Details
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => handleUnwatchCruise(watchedCruise.cruise_id)}
+                >
+                  Unwatch
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
       </Grid>
     </Container>
   );
