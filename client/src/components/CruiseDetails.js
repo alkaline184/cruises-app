@@ -364,6 +364,67 @@ const CruiseDetails = () => {
             </Grid>
           </Paper>
         </Grid>
+
+        {/* Cruise Stops */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>
+              Cruise Itinerary
+            </Typography>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Port</TableCell>
+                    <TableCell>Country</TableCell>
+                    <TableCell>Arrival</TableCell>
+                    <TableCell>Departure</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {Object.entries(cruise.stops_daily || {}).map(([date, stops]) => (
+                    stops.map((stop, index) => (
+                      <TableRow key={`${date}-${index}`}>
+                        <TableCell>
+                          {new Date(date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body1">{stop.port.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {stop.port.code}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{stop.port.country.name}</TableCell>
+                        <TableCell>
+                          {stop.arrival ? (
+                            new Date(stop.arrival_raw).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {stop.departure ? (
+                            new Date(stop.departure_raw).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          ) : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
       </Grid>
     </Container>
   );

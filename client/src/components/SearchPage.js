@@ -364,12 +364,11 @@ function SearchPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Cruise Line</TableCell>
                   <TableCell>Ship Name</TableCell>
                   <TableCell>Duration</TableCell>
                   <TableCell>Port of Departure</TableCell>
                   <TableCell>Departure Date</TableCell>
-                  <TableCell>Price Range</TableCell>
+                  <TableCell>Starting Price</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
@@ -384,10 +383,9 @@ function SearchPage() {
                     }}
                     sx={{ cursor: 'pointer' }}
                   >
-                    <TableCell>{cruise.vessel?.brand?.name || 'N/A'}</TableCell>
-                    <TableCell>{cruise.vessel?.name || 'N/A'}</TableCell>
-                    <TableCell>{cruise.duration} days</TableCell>
-                    <TableCell>{cruise.port?.name || 'N/A'}</TableCell>
+                    <TableCell>{cruise.vessel.name}</TableCell>
+                    <TableCell>{cruise.duration} nights</TableCell>
+                    <TableCell>{cruise.port.name}</TableCell>
                     <TableCell>
                       {cruise.departured_at ? (
                         (() => {
@@ -398,18 +396,12 @@ function SearchPage() {
                       ) : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {cruise.group_prices ? (
-                        <>
-                          ${convertToDollars(cruise.group_prices.min)} - ${convertToDollars(cruise.group_prices.S)}
-                        </>
-                      ) : (
-                        cruise.starting_price ? `$${convertToDollars(cruise.starting_price)}` : 'N/A'
-                      )}
+                      {cruise.starting_price ? `$${convertToDollars(cruise.starting_price)}` : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <Button
-                        variant="outlined"
-                        size="small"
+                        variant="contained"
+                        color="primary"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleWatchCruise(cruise);
