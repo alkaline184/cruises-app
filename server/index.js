@@ -245,52 +245,46 @@ app.delete('/api/watch/:id', async (req, res) => {
   }
 });
 
-// Database initialization
-const initializeDatabase = async () => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    
-    // Drop tables if they exist
-    await connection.execute(`DROP TABLE IF EXISTS price_history;`);
-    await connection.execute(`DROP TABLE IF EXISTS watched_cruises;`);
-    
-    // Create tables
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS watched_cruises (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        cruise_id VARCHAR(255) NOT NULL UNIQUE,
-        vessel_name VARCHAR(255),
-        departure_date VARCHAR(255),
-        port_name VARCHAR(255),
-        duration INT,
-        starting_price VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS price_history (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        cruise_id VARCHAR(255) NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (cruise_id) REFERENCES watched_cruises(cruise_id)
-      );
-    `);
-    
-    await connection.commit();
-    console.log('Database initialized successfully');
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error initializing database:', error);
-  } finally {
-    connection.release();
+// Initialize database
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Error connecting to database:', err);
+    return;
   }
-};
+
+  // Create tables if they don't exist
+  const createTables = `
+    CREATE TABLE IF NOT EXISTS watched_cruises (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      cruise_id VARCHAR(255) NOT NULL UNIQUE,
+      vessel_name VARCHAR(255),
+      departure_date VARCHAR(255),
+      port_name VARCHAR(255),
+      duration INT,
+      starting_price VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS price_history (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      watched_cruise_id INT,
+      price VARCHAR(255) NOT NULL,
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (watched_cruise_id) REFERENCES watched_cruises(id) ON DELETE CASCADE
+    );
+  `;
+
+  connection.query(createTables, (err) => {
+    connection.release();
+    if (err) {
+      console.error('Error creating tables:', err);
+    } else {
+      console.log('Database tables initialized successfully');
+    }
+  });
+});
 
 // Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  initializeDatabase();
 }); 
