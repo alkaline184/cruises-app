@@ -30,6 +30,7 @@ function SearchPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [cruises, setCruises] = useState([]);
+  const [watchedCruises, setWatchedCruises] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
@@ -201,10 +202,25 @@ function SearchPage() {
     }
   }, [filters]);
 
-  // Fetch cruises when filters change
+  const fetchWatchedCruises = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/watched`);
+      console.log('Fetched watched cruises:', response.data);
+      setWatchedCruises(response.data);
+    } catch (error) {
+      console.error('Error fetching watched cruises:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCruises();
-  }, [fetchCruises]);
+    fetchWatchedCruises();
+  }, [searchParams, fetchCruises]);
+
+  // Add a separate useEffect for initial watched cruises fetch
+  useEffect(() => {
+    fetchWatchedCruises();
+  }, []);
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({
@@ -251,10 +267,18 @@ function SearchPage() {
       console.log('Watch data being sent:', watchData); // Debug log
       
       await axios.post(`${API_URL}/watch`, watchData);
-      // You might want to show a success message or update the UI
+      fetchWatchedCruises(); // Refresh watched cruises list
     } catch (err) {
       console.error('Error watching cruise:', err);
-      // Handle error appropriately
+    }
+  };
+
+  const handleUnwatchCruise = async (cruiseId) => {
+    try {
+      await axios.delete(`${API_URL}/watch/${cruiseId}`);
+      fetchWatchedCruises(); // Refresh watched cruises list
+    } catch (error) {
+      console.error('Error unwatching cruise:', error);
     }
   };
 
@@ -426,16 +450,37 @@ function SearchPage() {
                       {cruise.starting_price ? `$${convertToDollars(cruise.starting_price)}` : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleWatchCruise(cruise);
-                        }}
-                      >
-                        Watch
-                      </Button>
+                      {(() => {
+                        const isWatched = watchedCruises.some(wc => wc.cruise_id === cruise.id.toString());
+                        console.log('Checking if cruise is watched:', {
+                          cruiseId: cruise.id,
+                          watchedCruises: watchedCruises,
+                          isWatched
+                        });
+                        return isWatched ? (
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnwatchCruise(cruise.id);
+                            }}
+                          >
+                            Unwatch
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWatchCruise(cruise);
+                            }}
+                          >
+                            Watch
+                          </Button>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}

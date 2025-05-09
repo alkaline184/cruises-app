@@ -220,9 +220,16 @@ app.post('/api/watched/update-prices', async (req, res) => {
         .replace(',', '.')        // Replace comma with dot for decimal
         || null;
       
+      // Update price history
       await connection.execute(
         'INSERT INTO price_history (cruise_id, price) VALUES (?, ?)',
         [cruise.cruise_id, cleanPrice]
+      );
+
+      // Update starting_price in watched_cruises table
+      await connection.execute(
+        'UPDATE watched_cruises SET starting_price = ? WHERE cruise_id = ?',
+        [cleanPrice, cruise.cruise_id]
       );
     }
     
