@@ -133,11 +133,6 @@ function SearchPage() {
         const [month, day, year] = filters.departure.split('/');
         params['departure[]'] = [`${year}-${month.padStart(2, '0')}`];
       }
-
-      console.log('Sending filters to API:', {
-        filters,
-        queryParams: params
-      });
       
       const response = await axios.get(`${API_URL}/cruises`, { 
         params,
@@ -150,16 +145,11 @@ function SearchPage() {
       if (!response.data) {
         throw new Error('No data received from API');
       }
-
-      // Log the entire response structure
-      console.log('Full API Response:', response.data);
       
       // The data structure from the API is response.data.data.data
       const cruisesData = response.data.data?.data;
-      console.log('Processed cruises data:', cruisesData);
       
       if (!Array.isArray(cruisesData)) {
-        console.error('Unexpected API response structure:', response.data);
         throw new Error('Invalid API response structure');
       }
 
@@ -167,21 +157,9 @@ function SearchPage() {
       setCruises(cruisesData);
       setTotalPages(response.data.data?.last_page || 1);
       setTotalCruises(response.data.data?.total || 0);
-      
-      // Log state updates
-      console.log('Updated state:', {
-        cruisesCount: cruisesData.length,
-        totalPages: response.data.data?.last_page,
-        totalCruises: response.data.data?.total
-      });
 
     } catch (err) {
-      console.error('Error fetching cruises:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        params: err.config?.params
-      });
+      console.error('Error fetching cruises:', err.message);
       
       let errorMessage = 'Failed to fetch cruises. ';
       if (err.response?.data?.message) {
@@ -205,7 +183,6 @@ function SearchPage() {
   const fetchWatchedCruises = async () => {
     try {
       const response = await axios.get(`${API_URL}/watched`);
-      console.log('Fetched watched cruises:', response.data);
       setWatchedCruises(response.data);
     } catch (error) {
       console.error('Error fetching watched cruises:', error);
@@ -239,10 +216,8 @@ function SearchPage() {
 
   const handleWatchCruise = async (cruise) => {
     try {
-      console.log('Cruise data:', cruise); // Debug log
-      
       if (!cruise || !cruise.id) {
-        console.error('Invalid cruise data:', cruise);
+        console.error('Invalid cruise data');
         return;
       }
       
@@ -263,8 +238,6 @@ function SearchPage() {
         duration: cruise.duration || null,
         starting_price: cleanPrice
       };
-      
-      console.log('Watch data being sent:', watchData); // Debug log
       
       await axios.post(`${API_URL}/watch`, watchData);
       fetchWatchedCruises(); // Refresh watched cruises list
@@ -452,11 +425,6 @@ function SearchPage() {
                     <TableCell>
                       {(() => {
                         const isWatched = watchedCruises.some(wc => wc.cruise_id === cruise.id.toString());
-                        console.log('Checking if cruise is watched:', {
-                          cruiseId: cruise.id,
-                          watchedCruises: watchedCruises,
-                          isWatched
-                        });
                         return isWatched ? (
                           <Button
                             variant="outlined"

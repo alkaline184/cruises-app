@@ -305,8 +305,6 @@ pool.getConnection((err, connection) => {
     connection.release();
     if (err) {
       console.error('Error creating tables:', err);
-    } else {
-      console.log('Database tables initialized successfully');
     }
   });
 });
